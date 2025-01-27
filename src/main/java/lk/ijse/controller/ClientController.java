@@ -7,9 +7,13 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.FlowPane;
 import javafx.stage.FileChooser;
+import javafx.scene.layout.HBox;
 import java.io.*;
 import java.net.Socket;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 
 public class ClientController {
     @FXML
@@ -27,21 +31,44 @@ public class ClientController {
     @FXML
     private Button btnImage;
 
+    @FXML
+    private TabPane emojiTabPane;
+
+    @FXML
+    private Button btnEmoji;
+
+    @FXML
+    private VBox emojiPickerBox;
+
     private Socket socket;
     private DataInputStream dataInputStream;
     private DataOutputStream dataOutputStream;
     private String message = "";
 
+    private final String[][] EMOJIS = {
+            // Smileys
+            {"😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜"},
+            // Hearts & Emotions
+            {"❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "💘", "💝", "💖", "💗", "💓", "💞", "💕", "💫", "💥", "💢", "💤"},
+            // Animals
+            {"🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🦆", "🦅", "🦉", "🦇"},
+            // Food & Drinks
+            {"🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🥑", "🍔", "🍕", "🌭", "🍿", "🧂"}
+    };
+
+    private final String[] CATEGORIES = {"Smileys", "Hearts", "Animals", "Food"};
+
     @FXML
     public void initialize() {
         try {
-            // Only proceed with initialization if messageVBox is not null
+            initializeEmojiPicker();
+            emojiPickerBox.setVisible(false);
+
             if (messageVBox != null) {
                 messageVBox.setSpacing(10);
                 scrollPane.setContent(messageVBox);
                 scrollPane.setFitToWidth(true);
 
-                // Auto scroll to bottom
                 messageVBox.heightProperty().addListener((observable, oldValue, newValue) ->
                         scrollPane.setVvalue(1.0));
             } else {
@@ -80,8 +107,37 @@ public class ClientController {
         }
     }
 
+    private void initializeEmojiPicker() {
+        for (int i = 0; i < CATEGORIES.length; i++) {
+            Tab tab = new Tab(CATEGORIES[i]);
+            FlowPane flowPane = new FlowPane();
+            flowPane.setHgap(5);
+            flowPane.setVgap(5);
+            flowPane.setPrefWrapLength(200);
+
+            for (String emoji : EMOJIS[i]) {
+                Button emojiButton = new Button(emoji);
+                emojiButton.setStyle("-fx-font-size: 20px; -fx-background-color: transparent;");
+                emojiButton.setOnAction(e -> {
+                    txtMessage.appendText(emoji);
+                    emojiPickerBox.setVisible(false);
+                });
+                flowPane.getChildren().add(emojiButton);
+            }
+
+            tab.setContent(flowPane);
+            emojiTabPane.getTabs().add(tab);
+        }
+    }
+
+    @FXML
+    void btnEmojiOnAction(ActionEvent event) {
+        emojiPickerBox.setVisible(!emojiPickerBox.isVisible());
+    }
+
     private void addMessage(String text) {
         Label label = new Label(text);
+        label.setStyle("-fx-font-size: 14px;");
         label.setWrapText(true);
         messageVBox.getChildren().add(label);
     }

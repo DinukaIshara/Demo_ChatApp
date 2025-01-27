@@ -4,20 +4,27 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
 
-<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lk.ijse.controller.ClientController">
-   <VBox spacing="10" AnchorPane.bottomAnchor="10" AnchorPane.leftAnchor="10" AnchorPane.rightAnchor="10" AnchorPane.topAnchor="10">
-      <ScrollPane fx:id="scrollPane" fitToWidth="true" VBox.vgrow="ALWAYS">
-         <VBox fx:id="messageVBox" spacing="10">
-            <padding>
-               <Insets top="10" right="10" bottom="10" left="10"/>
-            </padding>
-         </VBox>
-      </ScrollPane>
+<AnchorPane prefHeight="600.0" prefWidth="400.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lk.ijse.controller.ClientController">
+   <children>
+      <VBox spacing="10" AnchorPane.bottomAnchor="10" AnchorPane.leftAnchor="10" AnchorPane.rightAnchor="10" AnchorPane.topAnchor="10">
+         <ScrollPane fx:id="scrollPane" fitToWidth="true" VBox.vgrow="ALWAYS">
+            <VBox fx:id="messageVBox" spacing="10">
+               <padding>
+                  <Insets bottom="10" left="10" right="10" top="10" />
+               </padding>
+            </VBox>
+         </ScrollPane>
 
-      <HBox spacing="10">
-         <TextField fx:id="txtMessage" HBox.hgrow="ALWAYS" onAction="#txtMessageOnAction"/>
-         <Button fx:id="btnImage" text="Image" onAction="#btnImageOnAction"/>
-         <Button fx:id="btnSend" text="Send" onAction="#btnSendOnAction"/>
-      </HBox>
-   </VBox>
+         <VBox fx:id="emojiPickerBox" maxHeight="200" style="-fx-border-color: #ccc; -fx-border-radius: 5;">
+            <TabPane fx:id="emojiTabPane" tabClosingPolicy="UNAVAILABLE" />
+         </VBox>
+
+         <HBox spacing="10">
+            <TextField fx:id="txtMessage" onAction="#txtMessageOnAction" HBox.hgrow="ALWAYS" />
+            <Button fx:id="btnEmoji" onAction="#btnEmojiOnAction" text="😊" />
+            <Button fx:id="btnImage" onAction="#btnImageOnAction" text="Image" />
+            <Button fx:id="btnSend" onAction="#btnSendOnAction" text="Send" />
+         </HBox>
+      </VBox>
+   </children>
 </AnchorPane>
