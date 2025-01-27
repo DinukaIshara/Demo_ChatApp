@@ -3,9 +3,7 @@ package lk.ijse.controller;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
@@ -18,73 +16,74 @@ public class ClientController {
     private TextField txtMessage;
 
     @FXML
-    private TextArea txtArea;
+    private ScrollPane scrollPane;
+
+    @FXML
+    private VBox messageVBox;
 
     @FXML
     private Button btnSend;
 
     @FXML
-    private Button btnImage;  // Add this button to your FXML
+    private Button btnImage;
+
+    private Socket socket;
+    private DataInputStream dataInputStream;
+    private DataOutputStream dataOutputStream;
+    private String message = "";
 
     @FXML
-    private VBox imageContainer;  // Add this VBox to your FXML
-
-    Socket socket;
-    DataInputStream dataInputStream;
-    DataOutputStream dataOutputStream;
-    String message = "";
-
     public void initialize() {
-            // Start message receiving thread
+        try {
+            // Only proceed with initialization if messageVBox is not null
+            if (messageVBox != null) {
+                messageVBox.setSpacing(10);
+                scrollPane.setContent(messageVBox);
+                scrollPane.setFitToWidth(true);
+
+                // Auto scroll to bottom
+                messageVBox.heightProperty().addListener((observable, oldValue, newValue) ->
+                        scrollPane.setVvalue(1.0));
+            } else {
+                System.err.println("Error: messageVBox is null. Check FXML file for proper fx:id");
+                return;
+            }
+
             new Thread(() -> {
                 try {
-                socket = new Socket("localhost", 4000);
-                txtArea.appendText("Client Connected\n");
+                    socket = new Socket("localhost", 4000);
+                    Platform.runLater(() -> addMessage("Client Connected"));
 
-                dataInputStream = new DataInputStream(socket.getInputStream());
-                dataOutputStream = new DataOutputStream(socket.getOutputStream());
+                    dataInputStream = new DataInputStream(socket.getInputStream());
+                    dataOutputStream = new DataOutputStream(socket.getOutputStream());
 
-
-                while (!message.equals("Exit")) {
-                    try {
+                    while (!message.equals("Exit")) {
                         message = dataInputStream.readUTF();
 
-                        // Check if the message is an image
                         if (message.startsWith("[IMAGE]")) {
-                            // Handle received image
-                            String imagePath = message.substring(7); // Remove [IMAGE] prefix
+                            String imagePath = message.substring(7);
                             Platform.runLater(() -> {
                                 displayImage(imagePath);
-                                txtArea.appendText("\nServer: [Image Received]\n");
+                                addMessage("Server: [Image Received]");
                             });
                         } else {
-                            // Handle regular text message
-                            Platform.runLater(() -> txtArea.appendText("\nServer: " + message));
+                            Platform.runLater(() -> addMessage("Server: " + message));
                         }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        break;
                     }
-                }
                 } catch (IOException e) {
+                    Platform.runLater(() -> addMessage("Error: Server not found or disconnected"));
                     e.printStackTrace();
                 }
             }).start();
-
-
-    }
-
-    @FXML
-    void btnSendOnAction(ActionEvent event) {
-        try {
-            String message = txtMessage.getText();
-            dataOutputStream.writeUTF(message);
-            dataOutputStream.flush();
-            txtArea.appendText("\nClient: " + message);
-            txtMessage.clear();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void addMessage(String text) {
+        Label label = new Label(text);
+        label.setWrapText(true);
+        messageVBox.getChildren().add(label);
     }
 
     private void displayImage(String imagePath) {
@@ -95,9 +94,25 @@ public class ClientController {
             imageView.setFitWidth(150);
             imageView.setFitHeight(150);
             imageView.setPreserveRatio(true);
-
-            imageContainer.getChildren().add(imageView);
+            messageVBox.getChildren().add(imageView);
         } catch (Exception e) {
+            addMessage("Error loading image");
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    void btnSendOnAction(ActionEvent event) {
+        try {
+            String message = txtMessage.getText().trim();
+            if (!message.isEmpty()) {
+                dataOutputStream.writeUTF(message);
+                dataOutputStream.flush();
+                addMessage("Client: " + message);
+                txtMessage.clear();
+            }
+        } catch (IOException e) {
+            addMessage("Error: Failed to send message");
             e.printStackTrace();
         }
     }
@@ -113,22 +128,12 @@ public class ClientController {
 
         if (selectedFile != null) {
             try {
-                // Create image for display
-                Image image = new Image(selectedFile.toURI().toString());
-                ImageView imageView = new ImageView(image);
-                imageView.setFitWidth(150);
-                imageView.setFitHeight(150);
-                imageView.setPreserveRatio(true);
-
-                // Add image to the container
-                imageContainer.getChildren().add(imageView);
-
-                // Send image path to server
+                displayImage(selectedFile.getPath());
                 dataOutputStream.writeUTF("[IMAGE]" + selectedFile.getPath());
                 dataOutputStream.flush();
-                txtArea.appendText("\nClient: [Image Sent]\n");
-
+                addMessage("Client: [Image Sent]");
             } catch (IOException e) {
+                addMessage("Error: Failed to send image");
                 e.printStackTrace();
             }
         }

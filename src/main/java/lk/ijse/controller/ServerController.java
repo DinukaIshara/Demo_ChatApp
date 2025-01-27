@@ -3,14 +3,11 @@ package lk.ijse.controller;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -20,55 +17,73 @@ public class ServerController {
     private TextField txtMessage;
 
     @FXML
-    private TextArea txtArea;
+    private ScrollPane scrollPane;
+
+    @FXML
+    private VBox messageVBox;
 
     @FXML
     private Button btnSend;
 
     @FXML
-    private Button btnImage;  // Add this to your FXML
+    private Button btnImage;
+
+    private ServerSocket serverSocket;
+    private Socket socket;
+    private DataInputStream dataInputStream;
+    private DataOutputStream dataOutputStream;
+    private String message = "";
 
     @FXML
-    private VBox imageContainer;  // Add this to your FXML
-
-    ServerSocket serverSocket;
-    Socket socket;
-    DataInputStream dataInputStream;
-    DataOutputStream dataOutputStream;
-    String message = "";
-
     public void initialize() {
-        new Thread(() -> {
-            try {
-                serverSocket = new ServerSocket(4000);
-                Platform.runLater(() -> txtArea.appendText("Server is Started\n"));
+        try {
+            // Initialize UI components
+            messageVBox.setSpacing(10);
+            scrollPane.setContent(messageVBox);
+            scrollPane.setFitToWidth(true);
 
-                socket = serverSocket.accept();
-                Platform.runLater(() -> txtArea.appendText("Client is Accepted\n"));
+            // Auto scroll to bottom
+            messageVBox.heightProperty().addListener((observable, oldValue, newValue) ->
+                    scrollPane.setVvalue(1.0));
 
-                dataInputStream = new DataInputStream(socket.getInputStream());
-                dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            new Thread(() -> {
+                try {
+                    serverSocket = new ServerSocket(4000);
+                    Platform.runLater(() -> addMessage("Server Started. Waiting for client..."));
 
-                while (!message.equals("Exit")) {
-                    message = dataInputStream.readUTF();
+                    socket = serverSocket.accept();
+                    Platform.runLater(() -> addMessage("Client Connected!"));
 
-                    // Check if the message is an image
-                    if (message.startsWith("[IMAGE]")) {
-                        // Handle received image
-                        String imagePath = message.substring(7); // Remove [IMAGE] prefix
-                        Platform.runLater(() -> {
-                            displayImage(imagePath);
-                            txtArea.appendText("\nClient: [Image Received]\n");
-                        });
-                    } else {
-                        // Handle regular text message
-                        Platform.runLater(() -> txtArea.appendText("\nClient: " + message));
+                    dataInputStream = new DataInputStream(socket.getInputStream());
+                    dataOutputStream = new DataOutputStream(socket.getOutputStream());
+
+                    while (!message.equals("Exit")) {
+                        message = dataInputStream.readUTF();
+
+                        if (message.startsWith("[IMAGE]")) {
+                            String imagePath = message.substring(7);
+                            Platform.runLater(() -> {
+                                displayImage(imagePath);
+                                addMessage("Client: [Image Received]");
+                            });
+                        } else {
+                            Platform.runLater(() -> addMessage("Client: " + message));
+                        }
                     }
+                } catch (IOException e) {
+                    Platform.runLater(() -> addMessage("Error: Connection lost"));
+                    e.printStackTrace();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }).start();
+            }).start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void addMessage(String text) {
+        Label label = new Label(text);
+        label.setWrapText(true);
+        messageVBox.getChildren().add(label);
     }
 
     private void displayImage(String imagePath) {
@@ -79,9 +94,9 @@ public class ServerController {
             imageView.setFitWidth(150);
             imageView.setFitHeight(150);
             imageView.setPreserveRatio(true);
-
-            imageContainer.getChildren().add(imageView);
+            messageVBox.getChildren().add(imageView);
         } catch (Exception e) {
+            addMessage("Error loading image");
             e.printStackTrace();
         }
     }
@@ -89,12 +104,15 @@ public class ServerController {
     @FXML
     void btnSendOnAction(ActionEvent event) {
         try {
-            String message = txtMessage.getText();
-            dataOutputStream.writeUTF(message);
-            dataOutputStream.flush();
-            txtArea.appendText("\nServer: " + message);
-            txtMessage.clear();
+            String message = txtMessage.getText().trim();
+            if (!message.isEmpty()) {
+                dataOutputStream.writeUTF(message);
+                dataOutputStream.flush();
+                addMessage("Server: " + message);
+                txtMessage.clear();
+            }
         } catch (IOException e) {
+            addMessage("Error: Failed to send message");
             e.printStackTrace();
         }
     }
@@ -110,22 +128,12 @@ public class ServerController {
 
         if (selectedFile != null) {
             try {
-                // Create image for display
-                Image image = new Image(selectedFile.toURI().toString());
-                ImageView imageView = new ImageView(image);
-                imageView.setFitWidth(150);
-                imageView.setFitHeight(150);
-                imageView.setPreserveRatio(true);
-
-                // Add image to the container
-                imageContainer.getChildren().add(imageView);
-
-                // Send image path to client
+                displayImage(selectedFile.getPath());
                 dataOutputStream.writeUTF("[IMAGE]" + selectedFile.getPath());
                 dataOutputStream.flush();
-                txtArea.appendText("\nServer: [Image Sent]\n");
-
+                addMessage("Server: [Image Sent]");
             } catch (IOException e) {
+                addMessage("Error: Failed to send image");
                 e.printStackTrace();
             }
         }
